@@ -126,6 +126,7 @@
 <body>
 
 <div class="saving-toast" id="savingToast">✓ נשמר ב-Google Drive</div>
+<div class="saving-toast" id="localToast" style="top:70px;background:#333;border-color:#aaa">💾 נשמר אוטומטית</div>
 
 <!-- HEADER -->
 <div class="header no-print">
@@ -135,6 +136,7 @@
   <div style="color:white;font-size:13px;opacity:0.4;letter-spacing:1px">פגישת היכרות — סודי</div>
   <div class="header-actions">
     <button class="btn btn-outline" onclick="generateSummary()">✨ סיכום AI</button>
+    <button class="btn btn-outline" onclick="clearLocal()" title="מחק ונקה">🗑️</button>
     <button class="btn btn-white" onclick="saveToDrive()">☁️ Drive</button>
     <button class="btn btn-red" onclick="exportPDF()">📄 ייצא PDF</button>
   </div>
@@ -396,11 +398,17 @@
             <td id="t_flw_pct">—</td>
           </tr>
 
-          <tr class="sec"><td colspan="4">🏢 הוצאות קבועות (סכום קבוע)</td></tr>
-          <tr><td>שכירות</td><td>—</td><td><input type="number" id="t_rent" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_rent_pct" class="pct n">—</span></td></tr>
-          <tr><td>חשמל</td><td>—</td><td><input type="number" id="t_electric" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_electric_pct" class="pct n">—</span></td></tr>
-          <tr><td>הנה"ח + מיסים + ביטוח</td><td>—</td><td><input type="number" id="t_fixed_other" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_fixed_other_pct" class="pct n">—</span></td></tr>
-          <tr><td>אחר</td><td>—</td><td><input type="number" id="t_other" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_other_pct" class="pct n">—</span></td></tr>
+          <tr class="sec"><td colspan="4">🏢 הוצאות קבועות</td></tr>
+          <tr>
+            <td>שכירות (כמו במצב קיים)</td><td>—</td>
+            <td><span class="computed" id="t_rent_display" style="font-size:14px;font-weight:700">—</span></td>
+            <td><span id="t_rent_pct" class="pct n">—</span></td>
+          </tr>
+          <tr>
+            <td>הוצאות אחרות (ניתן לעריכה)</td><td>—</td>
+            <td><input type="number" id="t_other_expenses" placeholder="0" oninput="calc()" style="width:120px"></td>
+            <td><span id="t_other_expenses_pct" class="pct n">—</span></td>
+          </tr>
 
           <tr id="t_result_row">
             <td>💰 רווח יעד</td>
@@ -449,7 +457,51 @@
 </div>
 
 <script>
-document.getElementById('meeting_date').value = new Date().toISOString().split('T')[0];
+// ===== AUTOSAVE =====
+const SAVE_KEY = 'smartplate_dashboard_v1';
+const ALL_IDS = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address','years_active','challenges',
+  'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2','c_delivery','c_marketing',
+  'c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
+  't_sales_vat','t_avg_deal','t_deals_day','t_work_days',
+  't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input','t_delivery_pct_input','t_marketing_pct_input',
+  't_other_expenses',
+  'notes_meeting','notes_proposal','close_chance','followup_date','proposed_price'];
+
+function saveLocal() {
+  const data = {};
+  ALL_IDS.forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    ALL_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && data[id] !== undefined && data[id] !== '') el.value = data[id];
+    });
+    return true;
+  } catch(e) { return false; }
+}
+
+function clearLocal() {
+  if(confirm('למחוק את כל הנתונים השמורים ולהתחיל מחדש?')) {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+  }
+}
+
+// Auto-save on any input
+document.addEventListener('input', () => { saveLocal(); });
+document.addEventListener('change', () => { saveLocal(); });
+
+// Load on page load
+const loaded = loadLocal();
+if (!loaded) {
+  document.getElementById('meeting_date').value = new Date().toISOString().split('T')[0];
+}
 
 function fmt(n) { if(isNaN(n)||n===null) return '—'; return '₪'+Math.round(n).toLocaleString('he-IL'); }
 function pct(val,base) { if(!base||base===0) return '—'; return (val/base*100).toFixed(1)+'%'; }
@@ -569,13 +621,20 @@ function calc() {
   set('t_flw_pct', badge(pctNum(tFlw,ts), 55, 65));
   set('t_flw_pct_input', `<span class="badge badge-n">${tFlwPct.toFixed(1)}%</span>`);
 
-  const tRent=v('t_rent'), tElec=v('t_electric'), tFixed=v('t_fixed_other'), tOth=v('t_other');
-  set('t_rent_pct', pctSpan(tRent,ts));
-  set('t_electric_pct', pctSpan(tElec,ts));
-  set('t_fixed_other_pct', pctSpan(tFixed,ts));
-  set('t_other_pct', pctSpan(tOth,ts));
+  const tRentVal = v('c_rent'); // always mirrors current rent
+  const tOtherExp = v('t_other_expenses');
+  // auto-fill t_other_expenses from current if empty
+  const cOtherTotal = v('c_electric')+v('c_account')+v('c_taxes')+v('c_insurance')+v('c_other');
+  const tOtherExpFinal = tOtherExp > 0 ? tOtherExp : cOtherTotal;
+  if(tOtherExp === 0 && cOtherTotal > 0) {
+    const el = document.getElementById('t_other_expenses');
+    if(el && el.value === '') el.placeholder = Math.round(cOtherTotal).toString();
+  }
+  set('t_rent_display', '₪'+Math.round(tRentVal).toLocaleString('he-IL'));
+  set('t_rent_pct', pctSpan(tRentVal, ts));
+  set('t_other_expenses_pct', pctSpan(tOtherExpFinal, ts));
 
-  const tTotalExp = tAfc+tLabor+tLabor2+tDelivery+tMarketing+tRent+tElec+tFixed+tOth;
+  const tTotalExp = tAfc+tLabor+tLabor2+tDelivery+tMarketing+tRentVal+tOtherExpFinal;
   const tProfit = ts - tTotalExp;
   const tProfP = pctNum(tProfit,ts);
   const tResRow = document.getElementById('t_result_row');
@@ -622,7 +681,9 @@ function generateSummary() {
   const tLabor = ts * (v('t_labor_pct_input')+v('t_labor2_pct_input')) / 100;
   const tDelivery = ts * v('t_delivery_pct_input') / 100;
   const tMarketing = ts * v('t_marketing_pct_input') / 100;
-  const tProfit = ts - tAfc - tLabor - tDelivery - tMarketing - v('t_rent') - v('t_electric') - v('t_fixed_other') - v('t_other');
+  const tRentVal = v('c_rent'); // copied from current
+  const tOtherExp = v('t_other_expenses');
+  const tProfit = ts - tAfc - tLabor - tDelivery - tMarketing - tRentVal - tOtherExp;
   const afcP = cs ? (afc/cs*100).toFixed(1) : '—';
   const laborP = cs ? (labor/cs*100).toFixed(1) : '—';
 
@@ -674,33 +735,30 @@ async function saveToDrive() {
   const btn = event.target;
   btn.textContent = '⏳...';
   btn.disabled = true;
-
   const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address','years_active','challenges',
     'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2','c_delivery','c_marketing',
     'c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
     't_sales_vat','t_avg_deal','t_deals_day','t_work_days',
     't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input','t_delivery_pct_input','t_marketing_pct_input',
-    't_rent','t_electric','t_fixed_other','t_other',
+    't_rent_display','t_other_expenses',
     'notes_meeting','notes_proposal','close_chance','followup_date','proposed_price'];
   const data = {};
-  ids.forEach(id => { const el = document.getElementById(id); if(el) data[id] = el.value; });
-
+  ids.forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
   try {
-    const resp = await fetch('https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy', {
+    const resp = await fetch('https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardSave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const result = await resp.json();
     if (result.ok && result.fileUrl) {
       document.getElementById('savingToast').style.display = 'block';
-      setTimeout(() => document.getElementById('savingToast').style.display = 'none', 3000);
+      setTimeout(() => document.getElementById('savingToast').style.display='none', 3000);
       btn.textContent = '✅ נשמר!';
-      setTimeout(() => { btn.textContent = '☁️ Drive'; btn.disabled = false; }, 3000);
+      setTimeout(() => { btn.textContent='☁️ Drive'; btn.disabled=false; }, 3000);
       window.open(result.fileUrl, '_blank');
-    } else {
-      throw new Error(result.error || 'שגיאה לא ידועה');
-    }
+    } else { throw new Error(result.error || 'שגיאה'); }
   } catch(e) {
     alert('שגיאה: ' + e.message);
     btn.textContent = '☁️ Drive';
