@@ -137,7 +137,7 @@
   <div class="header-actions">
     <button class="btn btn-outline" onclick="generateSummary()">✨ סיכום AI</button>
     <button class="btn btn-outline" onclick="clearLocal()" title="מחק ונקה">🗑️</button>
-    <button class="btn btn-white" onclick="saveToDrive()">☁️ Drive</button>
+    <button class="btn btn-white" onclick="saveToSheet()">📊 Google Sheet</button>
     <button class="btn btn-red" onclick="exportPDF()">📄 ייצא PDF</button>
   </div>
 </div>
@@ -734,37 +734,43 @@ function exportPDF() {
   });
 }
 
-async function saveToDrive() {
+async function saveToSheet() {
   const btn = event.target;
-  btn.textContent = '⏳...';
+  btn.textContent = '⏳ יוצר...';
   btn.disabled = true;
-  const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address','years_active','challenges',
-    'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2','c_delivery','c_marketing',
-    'c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
-    't_sales_vat','t_avg_deal','t_deals_day','t_work_days',
-    't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input','t_delivery_pct_input','t_marketing_pct_input',
-    't_rent_display','t_other_expenses',
-    'notes_meeting','notes_proposal','close_chance','followup_date','proposed_price'];
-  const data = {};
-  ids.forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
+
+  const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address',
+    'years_active','followup_date','close_chance','proposed_price','challenges',
+    'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2',
+    'c_delivery','c_marketing','c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
+    't_sales_vat','t_avg_ticket','t_daily_covers','t_working_days',
+    't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input',
+    't_delivery_pct_input','t_other_expenses',
+    'notes_meeting','notes_proposal'];
+
+  const payload = {};
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) payload[id] = el.value || '';
+  });
+
   try {
-    const resp = await fetch('https://rosa-6d8ebb9e.base44.app/api/functions/saveToDrive', {
+    const resp = await fetch('https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/saveToSheet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify(payload)
     });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const result = await resp.json();
     if (result.ok && result.fileUrl) {
-      document.getElementById('savingToast').style.display = 'block';
-      setTimeout(() => document.getElementById('savingToast').style.display='none', 3000);
-      btn.textContent = '✅ נשמר!';
-      setTimeout(() => { btn.textContent='☁️ Drive'; btn.disabled=false; }, 3000);
       window.open(result.fileUrl, '_blank');
-    } else { throw new Error(result.error || 'שגיאה'); }
-  } catch(e) {
+      btn.textContent = '✅ נפתח!';
+      setTimeout(() => { btn.textContent = '📊 Google Sheet'; btn.disabled = false; }, 3000);
+    } else {
+      throw new Error(result.error || 'שגיאה לא ידועה');
+    }
+  } catch (e) {
     alert('שגיאה: ' + e.message);
-    btn.textContent = '☁️ Drive';
+    btn.textContent = '📊 Google Sheet';
     btn.disabled = false;
   }
 }
