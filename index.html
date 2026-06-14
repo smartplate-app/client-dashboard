@@ -406,7 +406,7 @@
           </tr>
           <tr>
             <td>הוצאות אחרות (ניתן לעריכה)</td><td>—</td>
-            <td><input type="number" id="t_other_expenses" placeholder="0" oninput="calc()" style="width:120px"></td>
+            <td><input type="number" id="t_other_expenses" placeholder="0" oninput="this.setAttribute('data-user-edited','yes');calc()" style="width:120px"></td>
             <td><span id="t_other_expenses_pct" class="pct n">—</span></td>
           </tr>
 
@@ -622,14 +622,16 @@ function calc() {
   set('t_flw_pct_input', `<span class="badge badge-n">${tFlwPct.toFixed(1)}%</span>`);
 
   const tRentVal = v('c_rent'); // always mirrors current rent
-  const tOtherExp = v('t_other_expenses');
-  // auto-fill t_other_expenses from current if empty
+  // sum all current fixed costs EXCEPT rent
   const cOtherTotal = v('c_electric')+v('c_account')+v('c_taxes')+v('c_insurance')+v('c_other');
-  const tOtherExpFinal = tOtherExp > 0 ? tOtherExp : cOtherTotal;
-  if(tOtherExp === 0 && cOtherTotal > 0) {
-    const el = document.getElementById('t_other_expenses');
-    if(el && el.value === '') el.placeholder = Math.round(cOtherTotal).toString();
+  // auto-populate t_other_expenses with the sum if user hasn't typed anything
+  const tOtherExpEl = document.getElementById('t_other_expenses');
+  const tOtherExpRaw = v('t_other_expenses');
+  if (tOtherExpEl && tOtherExpEl.getAttribute('data-user-edited') !== 'yes' && cOtherTotal > 0) {
+    tOtherExpEl.value = Math.round(cOtherTotal).toString();
+    tOtherExpEl.setAttribute('data-auto', 'yes');
   }
+  const tOtherExpFinal = v('t_other_expenses') > 0 ? v('t_other_expenses') : cOtherTotal;
   set('t_rent_display', '₪'+Math.round(tRentVal).toLocaleString('he-IL'));
   set('t_rent_pct', pctSpan(tRentVal, ts));
   set('t_other_expenses_pct', pctSpan(tOtherExpFinal, ts));
@@ -681,8 +683,9 @@ function generateSummary() {
   const tLabor = ts * (v('t_labor_pct_input')+v('t_labor2_pct_input')) / 100;
   const tDelivery = ts * v('t_delivery_pct_input') / 100;
   const tMarketing = ts * v('t_marketing_pct_input') / 100;
-  const tRentVal = v('c_rent'); // copied from current
-  const tOtherExp = v('t_other_expenses');
+  const tRentVal = v('c_rent');
+  const cOtherTotalSave = v('c_electric')+v('c_account')+v('c_taxes')+v('c_insurance')+v('c_other');
+  const tOtherExp = v('t_other_expenses') > 0 ? v('t_other_expenses') : cOtherTotalSave;
   const tProfit = ts - tAfc - tLabor - tDelivery - tMarketing - tRentVal - tOtherExp;
   const afcP = cs ? (afc/cs*100).toFixed(1) : '—';
   const laborP = cs ? (labor/cs*100).toFixed(1) : '—';
