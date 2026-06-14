@@ -736,43 +736,57 @@ function exportPDF() {
 
 async function saveToSheet() {
   const btn = event.target;
+  const origText = btn.textContent;
   btn.textContent = '⏳ יוצר...';
   btn.disabled = true;
 
-  const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address',
-    'years_active','followup_date','close_chance','proposed_price','challenges',
-    'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2',
-    'c_delivery','c_marketing','c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
-    't_sales_vat','t_avg_ticket','t_daily_covers','t_working_days',
-    't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input',
-    't_delivery_pct_input','t_other_expenses',
-    'notes_meeting','notes_proposal'];
-
-  const payload = {};
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) payload[id] = el.value || '';
-  });
-
   try {
-    const resp = await fetch('https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/saveToSheet', {
+    const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address',
+      'years_active','followup_date','close_chance','proposed_price','challenges',
+      'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2',
+      'c_delivery','c_marketing','c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
+      't_sales_vat','t_avg_ticket','t_daily_covers','t_working_days',
+      't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input',
+      't_delivery_pct_input','t_marketing_pct_input','t_other_expenses',
+      'notes_meeting','notes_proposal'];
+
+    const d = {};
+    ids.forEach(id => { const el = document.getElementById(id); if (el) d[id] = el.value || ''; });
+
+    const resp = await fetch('https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardSave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(d)
     });
+
     const result = await resp.json();
     if (result.ok && result.fileUrl) {
       window.open(result.fileUrl, '_blank');
       btn.textContent = '✅ נפתח!';
-      setTimeout(() => { btn.textContent = '📊 Google Sheet'; btn.disabled = false; }, 3000);
+      setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 3000);
     } else {
       throw new Error(result.error || 'שגיאה לא ידועה');
     }
-  } catch (e) {
+  } catch(e) {
     alert('שגיאה: ' + e.message);
-    btn.textContent = '📊 Google Sheet';
+    btn.textContent = origText;
     btn.disabled = false;
   }
+}
+
+function getGoogleToken() {
+  return new Promise((resolve, reject) => {
+    // Use Google Identity Services token client
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: '872936977161-q8g8g7e1q8g8g7e1q8g8g7e1.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: (resp) => {
+        if (resp.error) reject(new Error(resp.error));
+        else resolve(resp.access_token);
+      }
+    });
+    client.requestAccessToken();
+  });
 }
 
 
