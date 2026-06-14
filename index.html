@@ -674,7 +674,7 @@ async function saveToDrive() {
   const btn = event.target;
   btn.textContent = '⏳...';
   btn.disabled = true;
-  
+
   const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address','years_active','challenges',
     'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2','c_delivery','c_marketing',
     'c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
@@ -683,48 +683,31 @@ async function saveToDrive() {
     't_rent','t_electric','t_fixed_other','t_other',
     'notes_meeting','notes_proposal','close_chance','followup_date','proposed_price'];
   const data = {};
-  ids.forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
+  ids.forEach(id => { const el = document.getElementById(id); if(el) data[id] = el.value; });
 
-  // Use no-cors mode — can't read response but request goes through
-  // Instead, send via form POST to a new window
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = 'https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy';
-  form.target = '_blank';
-  form.style.display = 'none';
-  
-  // Send data as JSON in a hidden field won't work with form POST
-  // Use XMLHttpRequest with credentials
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.withCredentials = false;
-  xhr.onload = function() {
-    try {
-      const result = JSON.parse(xhr.responseText);
-      if(result.fileUrl) {
-        document.getElementById('savingToast').style.display = 'block';
-        setTimeout(() => document.getElementById('savingToast').style.display='none', 3000);
-        btn.textContent = '✅ נשמר!';
-        setTimeout(() => { btn.textContent='☁️ Drive'; btn.disabled=false; }, 3000);
-        window.open(result.fileUrl, '_blank');
-      } else {
-        throw new Error(result.error||'שגיאה לא ידועה');
-      }
-    } catch(e) {
-      alert('שגיאה: ' + e.message);
-      btn.textContent = '☁️ Drive';
-      btn.disabled = false;
+  try {
+    const resp = await fetch('https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    if (result.ok && result.fileUrl) {
+      document.getElementById('savingToast').style.display = 'block';
+      setTimeout(() => document.getElementById('savingToast').style.display = 'none', 3000);
+      btn.textContent = '✅ נשמר!';
+      setTimeout(() => { btn.textContent = '☁️ Drive'; btn.disabled = false; }, 3000);
+      window.open(result.fileUrl, '_blank');
+    } else {
+      throw new Error(result.error || 'שגיאה לא ידועה');
     }
-  };
-  xhr.onerror = function() {
-    // CORS blocked from file:// — open the dashboard from web URL instead
-    alert('⚠️ כדי לשמור ל-Drive, פתח את הדשבורד מהלינק:\nhttps://base44.app/api/apps/69b697029d0cd0fecb49189b/files/mp/public/69b697029d0cd0fecb49189b/cd890bfac_client_dashboard.html');
+  } catch(e) {
+    alert('שגיאה: ' + e.message);
     btn.textContent = '☁️ Drive';
     btn.disabled = false;
-  };
-  xhr.send(JSON.stringify(data));
+  }
 }
+
 
 calc();
 </script>
