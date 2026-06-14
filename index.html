@@ -689,14 +689,14 @@ async function saveToDrive() {
   // Instead, send via form POST to a new window
   const form = document.createElement('form');
   form.method = 'POST';
-  form.action = 'https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardProxy';
+  form.action = 'https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy';
   form.target = '_blank';
   form.style.display = 'none';
   
   // Send data as JSON in a hidden field won't work with form POST
   // Use XMLHttpRequest with credentials
   const xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardProxy', true);
+  xhr.open('POST', 'https://superagent-69b697029d0cd0fecb49189b.base44.app/api/functions/clientDashboardProxy', true);
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.withCredentials = false;
   xhr.onload = function() {
