@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPlate — דשבורד לקוח</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #111; direction: rtl; min-width: 900px; }
+  @page { size: A4 landscape; margin: 8mm; }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: #111; color: white;
+    padding: 0 48px;
+    display: flex; justify-content: space-between; align-items: center;
+    height: 80px; border-bottom: 3px solid #e94560;
+  }
+  .logo-area { display: flex; align-items: center; gap: 16px; }
+  .logo-text { font-size: 32px; font-weight: 900; letter-spacing: -1px; color: white; }
+  .logo-text span { color: #e94560; }
+  .logo-sub { font-size: 12px; opacity: 0.5; margin-top: 3px; letter-spacing: 2px; text-transform: uppercase; }
+  .header-actions { display: flex; gap: 10px; }
+  .btn { padding: 9px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 700; transition: all 0.15s; font-family: inherit; letter-spacing: 0.3px; }
+  .btn-white { background: white; color: #111; }
+  .btn-white:hover { background: #eee; }
+  .btn-red { background: #e94560; color: white; }
+  .btn-red:hover { background: #c73652; }
+  .btn-outline { background: transparent; color: white; border: 1.5px solid rgba(255,255,255,0.4); }
+  .btn-outline:hover { background: rgba(255,255,255,0.1); }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 1280px; margin: 0 auto; padding: 32px 40px; }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: white; border-radius: 10px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px; overflow: hidden;
+  }
+  .card-header {
+    background: #111; color: white;
+    padding: 12px 24px; display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h2 { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .card-body { padding: 24px; }
+
+  /* ===== FORM ===== */
+  .form-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    border: 1.5px solid #ddd; border-radius: 6px; padding: 9px 12px;
+    font-size: 14px; font-family: inherit; direction: rtl; color: #111;
+    background: #fafafa; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #111; background: white; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group.span2 { grid-column: span 2; }
+  .form-group.span3 { grid-column: span 3; }
+
+  /* ===== KPI BAR ===== */
+  .kpi-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin-bottom: 24px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 8px rgba(0,0,0,0.08); }
+  .kpi-item { padding: 20px 16px; text-align: center; border-left: 1px solid #f0f0f0; }
+  .kpi-item:last-child { border-left: none; }
+  .kpi-val { font-size: 22px; font-weight: 800; color: #111; }
+  .kpi-label { font-size: 11px; color: #999; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kpi-sub { font-size: 12px; margin-top: 6px; font-weight: 600; }
+
+  /* ===== TABLES ===== */
+  .pl-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; word-wrap: break-word; }
+  .pl-table th { background: #222; color: white; padding: 10px 16px; text-align: right; font-weight: 600; font-size: 12px; letter-spacing: 0.3px; }
+  .pl-table td { padding: 9px 16px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: middle; }
+  .pl-table tr:hover td { background: #fafafa; }
+  .pl-table tr.sec td { background: #f4f4f4; font-weight: 700; font-size: 12px; color: #333; padding: 7px 16px; border-bottom: 1px solid #e8e8e8; }
+  .pl-table tr.subtotal td { background: #111; color: white; font-weight: 700; font-size: 13px; }
+  .pl-table tr.result-pos td { background: #111; color: white; font-weight: 800; font-size: 14px; padding: 12px 16px; }
+  .pl-table tr.result-neg td { background: #e94560; color: white; font-weight: 800; font-size: 14px; padding: 12px 16px; }
+  .pl-table input[type="number"] {
+    width: 120px; border: 1.5px solid #ddd; border-radius: 5px;
+    padding: 5px 9px; font-size: 13px; text-align: left;
+    font-family: inherit; direction: ltr; background: #fafafa;
+  }
+  .pl-table input[type="number"]:focus { outline: none; border-color: #111; background: white; }
+  .computed { font-weight: 700; color: #111; }
+  .pct { font-size: 12px; font-weight: 600; }
+  .g { color: #16a34a; } .w { color: #d97706; } .r { color: #dc2626; } .n { color: #6b7280; }
+
+  /* ===== BADGES ===== */
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-g { background: #dcfce7; color: #15803d; }
+  .badge-w { background: #fef9c3; color: #92400e; }
+  .badge-r { background: #fee2e2; color: #b91c1c; }
+  .badge-n { background: #f3f4f6; color: #4b5563; }
+
+  /* ===== SALES CALC BOX ===== */
+  .sales-calc { background: #f9f9f9; border: 1.5px solid #e5e5e5; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; }
+  .sales-calc-title { font-size: 12px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+  .sales-calc-grid { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 12px; align-items: end; }
+  .calc-field { display: flex; flex-direction: column; gap: 5px; }
+  .calc-field label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
+  .calc-field input { border: 1.5px solid #ddd; border-radius: 6px; padding: 8px 12px; font-size: 14px; font-family: inherit; background: white; direction: ltr; text-align: left; }
+  .calc-field input:focus { outline: none; border-color: #111; }
+  .calc-result { background: #111; color: white; border-radius: 8px; padding: 12px 16px; text-align: center; }
+  .calc-result .res-val { font-size: 20px; font-weight: 800; }
+  .calc-result .res-label { font-size: 10px; opacity: 0.6; margin-top: 2px; text-transform: uppercase; }
+  .calc-arrow { font-size: 20px; color: #999; text-align: center; padding-bottom: 8px; }
+
+  /* ===== AI BOX ===== */
+  .ai-box { background: #111; color: white; border-radius: 10px; padding: 24px; margin-top: 24px; }
+  .ai-box h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ai-box .ai-text { font-size: 14px; line-height: 1.9; white-space: pre-wrap; }
+
+  /* ===== GAP CARD ===== */
+  .gap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .gap-item { text-align: center; padding: 20px; background: #f9f9f9; border-radius: 8px; }
+  .gap-item .g-val { font-size: 26px; font-weight: 800; }
+  .gap-item .g-label { font-size: 12px; color: #888; margin-top: 6px; }
+
+  .saving-toast { position: fixed; top: 24px; left: 24px; background: #111; color: white; padding: 10px 20px; border-radius: 8px; font-size: 13px; display: none; z-index: 999; border-right: 3px solid #e94560; }
+
+  @media print { .no-print { display: none !important; } body { background: white; min-width: unset; } }
+</style>
+</head>
+<body>
+
+<div class="saving-toast" id="savingToast">✓ נשמר ב-Google Drive</div>
+
+<!-- HEADER -->
+<div class="header no-print">
+  <div class="logo-area">
+    <img src="https://base44.app/api/apps/69b697029d0cd0fecb49189b/files/mp/public/69b697029d0cd0fecb49189b/bd51f8726_5022b59e1_7c68bf93e_smartplate_logo_insta_320x320px.png" style="height:52px;width:auto;border-radius:4px" alt="SmartPlate">
+  </div>
+  <div style="color:white;font-size:13px;opacity:0.4;letter-spacing:1px">פגישת היכרות — סודי</div>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="generateSummary()">✨ סיכום AI</button>
+    <button class="btn btn-white" onclick="saveToDrive()">☁️ Drive</button>
+    <button class="btn btn-red" onclick="exportPDF()">📄 ייצא PDF</button>
+  </div>
+</div>
+
+<div class="container" id="reportContent">
+
+  <!-- לוגו בתוך PDF -->
+  <div style="display:none" class="pdf-header">
+    <div style="font-size:28px;font-weight:900;color:#111;margin-bottom:4px">Smart<span style="color:#e94560">Plate</span></div>
+    <div style="font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px">Restaurant Consulting — Confidential</div>
+  </div>
+
+  <!-- פרטי לקוח -->
+  <div class="card">
+    <div class="card-header"><h2>👤 פרטי הלקוח</h2></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label>שם המסעדה</label><input type="text" id="rest_name" placeholder="שם המסעדה" oninput="updateTitle()"></div>
+        <div class="form-group"><label>שם איש הקשר</label><input type="text" id="contact_name" placeholder="שם מלא"></div>
+        <div class="form-group"><label>טלפון</label><input type="text" id="phone" placeholder="05X-XXXXXXX"></div>
+        <div class="form-group"><label>תאריך פגישה</label><input type="date" id="meeting_date"></div>
+        <div class="form-group"><label>סוג עסק</label>
+          <select id="biz_type">
+            <option value="">בחר סוג</option>
+            <option>מסעדה</option><option>בר</option><option>קפה</option><option>פאב</option>
+            <option>פיצרייה</option><option>סטייק האוס</option><option>מזון מהיר</option><option>קייטרינג</option><option>אחר</option>
+          </select>
+        </div>
+        <div class="form-group"><label>מספר מושבים</label><input type="number" id="seats" placeholder="0"></div>
+        <div class="form-group"><label>שנות פעילות</label><input type="number" id="years_active" placeholder="0"></div>
+        <div class="form-group"><label>פולו-אפ מתוכנן</label><input type="date" id="followup_date"></div>
+        <div class="form-group span2"><label>כתובת</label><input type="text" id="address" placeholder="עיר, רחוב"></div>
+        <div class="form-group"><label>סיכויי סגירה</label>
+          <select id="close_chance">
+            <option value="">בחר</option>
+            <option>🔥 גבוה מאוד</option><option>✅ גבוה</option><option>⚡ בינוני</option><option>❄️ נמוך</option>
+          </select>
+        </div>
+        <div class="form-group"><label>מחיר מוצע (₪/חודש)</label><input type="number" id="proposed_price" placeholder="0"></div>
+        <div class="form-group full"><label>אתגרים עיקריים</label>
+          <textarea id="challenges" rows="2" placeholder="מה הלקוח אמר שמטריד אותו הכי הרבה..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI BAR -->
+  <div class="kpi-bar">
+    <div class="kpi-item">
+      <div class="kpi-val" id="kpi_sales_vat">₪0</div>
+      <div class="kpi-label">מחזור קיים כולל מע"מ</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-val" id="kpi_sales">₪0</div>
+      <div class="kpi-label">מחזור קיים נטו</div>
+      <div class="kpi-sub" id="kpi_sales_target" style="color:#999">יעד: —</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-val" id="kpi_food">—</div>
+      <div class="kpi-label">Food Cost %</div>
+      <div class="kpi-sub" id="kpi_food_badge"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-val" id="kpi_labor">—</div>
+      <div class="kpi-label">Labor Cost %</div>
+      <div class="kpi-sub" id="kpi_labor_badge"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-val" id="kpi_profit">—</div>
+      <div class="kpi-label">רווח / הפסד</div>
+      <div class="kpi-sub" id="kpi_profit_badge"></div>
+    </div>
+  </div>
+
+  <!-- מצב קיים -->
+  <div class="card">
+    <div class="card-header"><h2>📊 מצב קיים — ממוצע חודשי</h2></div>
+    <div class="card-body" style="padding:0">
+      <table class="pl-table">
+        <thead><tr><th style="width:45%">שורה</th><th style="width:27%">סכום (₪)</th><th style="width:28%">% ממחזור</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="3">📈 הכנסות</td></tr>
+          <tr>
+            <td>מחזור כולל מע"מ</td>
+            <td><input type="number" id="c_sales_vat" placeholder="0" oninput="calc()"></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>מחזור ללא מע"מ (÷1.18)</td>
+            <td><span class="computed" id="c_sales_val">—</span></td>
+            <td>100%</td>
+          </tr>
+
+          <tr class="sec"><td colspan="3">🥩 עלות מזון (AFC)</td></tr>
+          <tr>
+            <td>מלאי פתיחה</td>
+            <td><input type="number" id="c_open" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_open_pct" class="pct n">—</span></td>
+          </tr>
+          <tr>
+            <td>קניות</td>
+            <td><input type="number" id="c_purch" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_purch_pct" class="pct n">—</span></td>
+          </tr>
+          <tr>
+            <td>מלאי סגירה</td>
+            <td><input type="number" id="c_close" placeholder="0" oninput="calc()"></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><strong>AFC סה"כ</strong></td>
+            <td><span class="computed" id="c_afc_val">—</span></td>
+            <td><span id="c_afc_pct">—</span></td>
+          </tr>
+
+          <tr class="sec"><td colspan="3">👷 כוח אדם</td></tr>
+          <tr>
+            <td>שכר (כולל מעסיק)</td>
+            <td><input type="number" id="c_labor" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_labor_pct" class="pct">—</span></td>
+          </tr>
+          <tr>
+            <td>עלויות נוספות</td>
+            <td><input type="number" id="c_labor2" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_labor2_pct" class="pct n">—</span></td>
+          </tr>
+
+          <tr class="sec"><td colspan="3">📦 הוצאות משתנות</td></tr>
+          <tr>
+            <td>עמלת משלוחים (Wolt)</td>
+            <td><input type="number" id="c_delivery" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_delivery_pct" class="pct n">—</span></td>
+          </tr>
+          <tr>
+            <td>שיווק / יח"צ</td>
+            <td><input type="number" id="c_marketing" placeholder="0" oninput="calc()"></td>
+            <td><span id="c_marketing_pct" class="pct n">—</span></td>
+          </tr>
+
+          <tr class="subtotal">
+            <td>🔢 סה"כ Food + Labor + Wolt</td>
+            <td id="c_flw_val">—</td>
+            <td id="c_flw_pct">—</td>
+          </tr>
+
+          <tr class="sec"><td colspan="3">🏢 הוצאות קבועות</td></tr>
+          <tr><td>שכירות</td><td><input type="number" id="c_rent" placeholder="0" oninput="calc()"></td><td><span id="c_rent_pct" class="pct n">—</span></td></tr>
+          <tr><td>חשמל</td><td><input type="number" id="c_electric" placeholder="0" oninput="calc()"></td><td><span id="c_electric_pct" class="pct n">—</span></td></tr>
+          <tr><td>הנהלת חשבונות</td><td><input type="number" id="c_account" placeholder="0" oninput="calc()"></td><td><span id="c_account_pct" class="pct n">—</span></td></tr>
+          <tr><td>מיסים / מים / ארנונה</td><td><input type="number" id="c_taxes" placeholder="0" oninput="calc()"></td><td><span id="c_taxes_pct" class="pct n">—</span></td></tr>
+          <tr><td>ביטוח</td><td><input type="number" id="c_insurance" placeholder="0" oninput="calc()"></td><td><span id="c_insurance_pct" class="pct n">—</span></td></tr>
+          <tr><td>אחר</td><td><input type="number" id="c_other" placeholder="0" oninput="calc()"></td><td><span id="c_other_pct" class="pct n">—</span></td></tr>
+
+          <tr id="c_result_row">
+            <td>💰 רווח / הפסד</td>
+            <td id="c_profit_val">—</td>
+            <td id="c_profit_pct">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- יעד -->
+  <div class="card">
+    <div class="card-header"><h2>🎯 יעד מוצע — SmartPlate</h2></div>
+    <div class="card-body">
+
+      <!-- חישוב מחזור יעד -->
+      <div class="sales-calc">
+        <div class="sales-calc-title">📐 חישוב מחזור יעד — ממוצע לעסקה × עסקאות ביום × ימי עבודה</div>
+        <div class="sales-calc-grid">
+          <div class="calc-field">
+            <label>ממוצע לעסקה (₪ כולל מע"מ)</label>
+            <input type="number" id="t_avg_deal" placeholder="120" oninput="calcTarget()">
+          </div>
+          <div class="calc-arrow">×</div>
+          <div class="calc-field">
+            <label>עסקאות ביום</label>
+            <input type="number" id="t_deals_day" placeholder="80" oninput="calcTarget()">
+          </div>
+          <div class="calc-arrow">×</div>
+          <div class="calc-field">
+            <label>ימי עבודה בחודש</label>
+            <input type="number" id="t_work_days" placeholder="26" oninput="calcTarget()">
+          </div>
+          <div class="calc-arrow">=</div>
+          <div class="calc-result">
+            <div class="res-val" id="t_calc_vat">₪0</div>
+            <div class="res-label">מחזור יעד כולל מע"מ</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:24px;align-items:center">
+          <div style="font-size:13px;color:#666">מחזור יעד נטו (÷1.18): <strong id="t_calc_net" style="color:#111">—</strong></div>
+          <button class="btn btn-white" style="border:1.5px solid #ddd;font-size:12px;padding:6px 14px" onclick="applyTargetSales()">↓ הכנס לטבלה</button>
+        </div>
+      </div>
+
+    </div>
+    <div style="padding:0">
+      <table class="pl-table">
+        <thead><tr><th style="width:40%">שורה</th><th style="width:20%">% יעד</th><th style="width:20%">סכום (₪)</th><th style="width:20%">% ממחזור</th></tr></thead>
+        <tbody>
+          <tr class="sec"><td colspan="4">📈 הכנסות</td></tr>
+          <tr>
+            <td>מחזור יעד כולל מע"מ</td>
+            <td>—</td>
+            <td><input type="number" id="t_sales_vat" placeholder="0" oninput="calc()"></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>מחזור יעד נטו (÷1.18)</td>
+            <td>—</td>
+            <td><span class="computed" id="t_sales_val">—</span></td>
+            <td>100%</td>
+          </tr>
+
+          <tr class="sec"><td colspan="4">🥩 עלות מזון (AFC)</td></tr>
+          <tr>
+            <td>AFC %</td>
+            <td><input type="number" id="t_afc_pct_input" placeholder="28" step="0.1" oninput="calc()" style="width:80px"> %</td>
+            <td><span class="computed" id="t_afc_val">—</span></td>
+            <td><span id="t_afc_pct_display" class="pct">—</span></td>
+          </tr>
+
+          <tr class="sec"><td colspan="4">👷 כוח אדם</td></tr>
+          <tr>
+            <td>שכר %</td>
+            <td><input type="number" id="t_labor_pct_input" placeholder="25" step="0.1" oninput="calc()" style="width:80px"> %</td>
+            <td><span class="computed" id="t_labor_val">—</span></td>
+            <td><span id="t_labor_pct_display" class="pct">—</span></td>
+          </tr>
+          <tr>
+            <td>עלויות נוספות %</td>
+            <td><input type="number" id="t_labor2_pct_input" placeholder="0" step="0.1" oninput="calc()" style="width:80px"> %</td>
+            <td><span class="computed" id="t_labor2_val">—</span></td>
+            <td><span id="t_labor2_pct_display" class="pct n">—</span></td>
+          </tr>
+
+          <tr class="sec"><td colspan="4">📦 הוצאות משתנות</td></tr>
+          <tr>
+            <td>עמלת משלוחים (Wolt) %</td>
+            <td><input type="number" id="t_delivery_pct_input" placeholder="12" step="0.1" oninput="calc()" style="width:80px"> %</td>
+            <td><span class="computed" id="t_delivery_val">—</span></td>
+            <td><span id="t_delivery_pct_display" class="pct n">—</span></td>
+          </tr>
+          <tr>
+            <td>שיווק %</td>
+            <td><input type="number" id="t_marketing_pct_input" placeholder="2" step="0.1" oninput="calc()" style="width:80px"> %</td>
+            <td><span class="computed" id="t_marketing_val">—</span></td>
+            <td><span id="t_marketing_pct_display" class="pct n">—</span></td>
+          </tr>
+
+          <tr class="subtotal">
+            <td>🔢 סה"כ Food + Labor + Wolt</td>
+            <td id="t_flw_pct_input">—</td>
+            <td id="t_flw_val">—</td>
+            <td id="t_flw_pct">—</td>
+          </tr>
+
+          <tr class="sec"><td colspan="4">🏢 הוצאות קבועות (סכום קבוע)</td></tr>
+          <tr><td>שכירות</td><td>—</td><td><input type="number" id="t_rent" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_rent_pct" class="pct n">—</span></td></tr>
+          <tr><td>חשמל</td><td>—</td><td><input type="number" id="t_electric" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_electric_pct" class="pct n">—</span></td></tr>
+          <tr><td>הנה"ח + מיסים + ביטוח</td><td>—</td><td><input type="number" id="t_fixed_other" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_fixed_other_pct" class="pct n">—</span></td></tr>
+          <tr><td>אחר</td><td>—</td><td><input type="number" id="t_other" placeholder="0" oninput="calc()" style="width:120px"></td><td><span id="t_other_pct" class="pct n">—</span></td></tr>
+
+          <tr id="t_result_row">
+            <td>💰 רווח יעד</td>
+            <td id="t_profit_pct_col">—</td>
+            <td id="t_profit_val">—</td>
+            <td id="t_profit_pct">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- פוטנציאל שיפור -->
+  <div class="card" id="gapCard" style="display:none">
+    <div class="card-header"><h2>📈 פוטנציאל שיפור</h2></div>
+    <div class="card-body">
+      <div class="gap-grid">
+        <div class="gap-item"><div class="g-val" id="gap_food" style="color:#16a34a">—</div><div class="g-label">חיסכון ב-Food Cost</div></div>
+        <div class="gap-item"><div class="g-val" id="gap_labor" style="color:#16a34a">—</div><div class="g-label">חיסכון ב-Labor</div></div>
+        <div class="gap-item"><div class="g-val" id="gap_profit" style="color:#e94560">—</div><div class="g-label">שיפור ברווח הצפוי</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- הערות יועץ -->
+  <div class="card">
+    <div class="card-header"><h2>📝 הערות יועץ</h2></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>תצפיות מהפגישה</label>
+          <textarea id="notes_meeting" rows="3" placeholder="מה שמת לב בפגישה — רמת המנהל, צוות, תפעול, ניקיון, תהליכים..."></textarea>
+        </div>
+        <div class="form-group full"><label>הצעת ערך ל-SmartPlate</label>
+          <textarea id="notes_proposal" rows="3" placeholder="מה אנחנו יכולים לעשות עבורם..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Summary -->
+  <div class="ai-box" id="aiBox" style="display:none">
+    <h3>✨ סיכום AI — סודי</h3>
+    <div class="ai-text" id="aiSummaryText"></div>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('meeting_date').value = new Date().toISOString().split('T')[0];
+
+function fmt(n) { if(isNaN(n)||n===null) return '—'; return '₪'+Math.round(n).toLocaleString('he-IL'); }
+function pct(val,base) { if(!base||base===0) return '—'; return (val/base*100).toFixed(1)+'%'; }
+function pctNum(val,base) { if(!base||base===0) return null; return val/base*100; }
+function v(id) { return parseFloat(document.getElementById(id).value)||0; }
+function set(id,val) { const el=document.getElementById(id); if(el) el.innerHTML=val; }
+function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+function badge(p, low, high) {
+  if(p===null||p===undefined) return '<span class="badge badge-n">—</span>';
+  if(p<=low) return `<span class="badge badge-g">${p.toFixed(1)}%</span>`;
+  if(p<=high) return `<span class="badge badge-w">${p.toFixed(1)}%</span>`;
+  return `<span class="badge badge-r">${p.toFixed(1)}%</span>`;
+}
+function pctSpan(val, base, cls='n') {
+  const p = pctNum(val,base);
+  if(p===null) return '<span class="pct n">—</span>';
+  return `<span class="pct ${cls}">${p.toFixed(1)}%</span>`;
+}
+
+function calcTarget() {
+  const avg = v('t_avg_deal');
+  const deals = v('t_deals_day');
+  const days = v('t_work_days');
+  const totalVat = avg * deals * days;
+  const totalNet = totalVat / 1.18;
+  set('t_calc_vat', fmt(totalVat));
+  set('t_calc_net', fmt(totalNet));
+}
+
+function applyTargetSales() {
+  const avg = v('t_avg_deal');
+  const deals = v('t_deals_day');
+  const days = v('t_work_days');
+  const totalVat = avg * deals * days;
+  if(totalVat > 0) {
+    document.getElementById('t_sales_vat').value = Math.round(totalVat);
+    calc();
+  }
+}
+
+function calc() {
+  // === מצב קיים ===
+  const csVat = v('c_sales_vat');
+  const cs = csVat / 1.18;
+  set('c_sales_val', fmt(cs));
+
+  const afc = v('c_open') + v('c_purch') - v('c_close');
+  set('c_afc_val', fmt(afc));
+  const afcP = pctNum(afc,cs);
+  set('c_afc_pct', badge(afcP, 28, 34));
+  set('c_open_pct', pctSpan(v('c_open'),cs));
+  set('c_purch_pct', pctSpan(v('c_purch'),cs));
+
+  const labor = v('c_labor') + v('c_labor2');
+  const laborP = pctNum(labor,cs);
+  set('c_labor_pct', badge(laborP, 25, 32));
+  set('c_labor2_pct', pctSpan(v('c_labor2'),cs));
+
+  const delivery = v('c_delivery');
+  set('c_delivery_pct', pctSpan(delivery,cs));
+  set('c_marketing_pct', pctSpan(v('c_marketing'),cs));
+
+  const flw = afc + labor + delivery;
+  set('c_flw_val', fmt(flw));
+  set('c_flw_pct', badge(pctNum(flw,cs), 55, 65));
+
+  ['rent','electric','account','taxes','insurance','other'].forEach(f => {
+    set(`c_${f}_pct`, pctSpan(v(`c_${f}`),cs));
+  });
+
+  const totalExp = afc + labor + delivery + v('c_marketing') + v('c_rent') + v('c_electric') + v('c_account') + v('c_taxes') + v('c_insurance') + v('c_other');
+  const profit = cs - totalExp;
+  const profP = pctNum(profit,cs);
+  const resRow = document.getElementById('c_result_row');
+  if(resRow) resRow.className = profit>=0 ? 'result-pos' : 'result-neg';
+  set('c_profit_val', fmt(profit));
+  set('c_profit_pct', badge(profP, 999, -1)); // always show as-is
+  // custom profit badge
+  if(profP!==null) {
+    const cls = profit>=0?'badge-g':'badge-r';
+    set('c_profit_pct', `<span class="badge ${cls}">${profP.toFixed(1)}%</span>`);
+  }
+
+  // === יעד ===
+  const tsVat = v('t_sales_vat');
+  const ts = tsVat / 1.18;
+  set('t_sales_val', fmt(ts));
+
+  const tAfcPct = v('t_afc_pct_input');
+  const tLaborPct = v('t_labor_pct_input');
+  const tLabor2Pct = v('t_labor2_pct_input');
+  const tDeliveryPct = v('t_delivery_pct_input');
+  const tMarketingPct = v('t_marketing_pct_input');
+
+  const tAfc = ts * tAfcPct / 100;
+  const tLabor = ts * tLaborPct / 100;
+  const tLabor2 = ts * tLabor2Pct / 100;
+  const tDelivery = ts * tDeliveryPct / 100;
+  const tMarketing = ts * tMarketingPct / 100;
+
+  set('t_afc_val', fmt(tAfc));
+  set('t_labor_val', fmt(tLabor));
+  set('t_labor2_val', fmt(tLabor2));
+  set('t_delivery_val', fmt(tDelivery));
+  set('t_marketing_val', fmt(tMarketing));
+
+  set('t_afc_pct_display', badge(tAfcPct||null, 28, 34));
+  set('t_labor_pct_display', badge(tLaborPct||null, 25, 32));
+  set('t_labor2_pct_display', pctSpan(tLabor2, ts));
+  set('t_delivery_pct_display', pctSpan(tDelivery, ts));
+  set('t_marketing_pct_display', pctSpan(tMarketing, ts));
+
+  const tFlw = tAfc + tLabor + tLabor2 + tDelivery;
+  const tFlwPct = tAfcPct + tLaborPct + tLabor2Pct + tDeliveryPct;
+  set('t_flw_val', fmt(tFlw));
+  set('t_flw_pct', badge(pctNum(tFlw,ts), 55, 65));
+  set('t_flw_pct_input', `<span class="badge badge-n">${tFlwPct.toFixed(1)}%</span>`);
+
+  const tRent=v('t_rent'), tElec=v('t_electric'), tFixed=v('t_fixed_other'), tOth=v('t_other');
+  set('t_rent_pct', pctSpan(tRent,ts));
+  set('t_electric_pct', pctSpan(tElec,ts));
+  set('t_fixed_other_pct', pctSpan(tFixed,ts));
+  set('t_other_pct', pctSpan(tOth,ts));
+
+  const tTotalExp = tAfc+tLabor+tLabor2+tDelivery+tMarketing+tRent+tElec+tFixed+tOth;
+  const tProfit = ts - tTotalExp;
+  const tProfP = pctNum(tProfit,ts);
+  const tResRow = document.getElementById('t_result_row');
+  if(tResRow) tResRow.className = tProfit>=0 ? 'result-pos' : 'result-neg';
+  set('t_profit_val', fmt(tProfit));
+  set('t_profit_pct_col', tProfP!==null ? `<span class="badge badge-n">${tProfP.toFixed(1)}%</span>` : '—');
+  set('t_profit_pct', tProfP!==null ? (tProfit>=0?`<span class="badge badge-g">${tProfP.toFixed(1)}%</span>`:`<span class="badge badge-r">${tProfP.toFixed(1)}%</span>`) : '—');
+
+  // === KPIs ===
+  setText('kpi_sales_vat', fmt(csVat));
+  setText('kpi_sales', fmt(cs));
+  setText('kpi_sales_target', ts ? `יעד נטו: ${fmt(ts)}` : 'יעד: —');
+  setText('kpi_food', afcP!==null ? afcP.toFixed(1)+'%' : '—');
+  set('kpi_food_badge', badge(afcP, 28, 34));
+  setText('kpi_labor', laborP!==null ? laborP.toFixed(1)+'%' : '—');
+  set('kpi_labor_badge', badge(laborP, 25, 32));
+  setText('kpi_profit', fmt(profit));
+  set('kpi_profit_badge', profP!==null?(profit>=0?`<span class="badge badge-g">${profP.toFixed(1)}%</span>`:`<span class="badge badge-r">${profP.toFixed(1)}%</span>`):'');
+
+  // === Gap ===
+  if(cs>0 && ts>0) {
+    document.getElementById('gapCard').style.display='block';
+    set('gap_food', fmt(afc-tAfc));
+    set('gap_labor', fmt(labor-tLabor-tLabor2));
+    set('gap_profit', fmt(tProfit-profit));
+  }
+}
+
+function updateTitle() {
+  const name = document.getElementById('rest_name').value;
+  document.title = name ? `SmartPlate — ${name}` : 'SmartPlate — דשבורד לקוח';
+}
+
+function generateSummary() {
+  const name = document.getElementById('rest_name').value || 'הלקוח';
+  const csVat = v('c_sales_vat');
+  const cs = csVat / 1.18;
+  const afc = v('c_open')+v('c_purch')-v('c_close');
+  const labor = v('c_labor')+v('c_labor2');
+  const profit = cs - afc - labor - v('c_delivery') - v('c_marketing') - v('c_rent') - v('c_electric') - v('c_account') - v('c_taxes') - v('c_insurance') - v('c_other');
+  const tsVat = v('t_sales_vat');
+  const ts = tsVat / 1.18;
+  const tAfc = ts * v('t_afc_pct_input') / 100;
+  const tLabor = ts * (v('t_labor_pct_input')+v('t_labor2_pct_input')) / 100;
+  const tDelivery = ts * v('t_delivery_pct_input') / 100;
+  const tMarketing = ts * v('t_marketing_pct_input') / 100;
+  const tProfit = ts - tAfc - tLabor - tDelivery - tMarketing - v('t_rent') - v('t_electric') - v('t_fixed_other') - v('t_other');
+  const afcP = cs ? (afc/cs*100).toFixed(1) : '—';
+  const laborP = cs ? (labor/cs*100).toFixed(1) : '—';
+
+  const summary = `📋 סיכום פגישת היכרות — ${name}
+תאריך: ${document.getElementById('meeting_date').value}
+
+📊 מצב נוכחי:
+• מחזור חודשי כולל מע"מ: ${fmt(csVat)}
+• מחזור נטו: ${fmt(cs)}
+• Food Cost: ${afcP}%${parseFloat(afcP)>34?' ⚠️ גבוה':'  ✅ תקין'}
+• Labor Cost: ${laborP}%${parseFloat(laborP)>32?' ⚠️ גבוה':'  ✅ תקין'}
+• רווח נוכחי: ${fmt(profit)} (${cs?(profit/cs*100).toFixed(1)+'%':'—'})
+
+${document.getElementById('challenges').value?`🔴 אתגרים: ${document.getElementById('challenges').value}\n`:''}
+🎯 יעד מוצע:
+• מחזור יעד כולל מע"מ: ${fmt(tsVat)}
+• מחזור יעד נטו: ${fmt(ts)}
+• רווח צפוי: ${fmt(tProfit)} (${ts?(tProfit/ts*100).toFixed(1)+'%':'—'})
+• פוטנציאל שיפור: ${fmt(tProfit-profit)}
+
+${document.getElementById('notes_meeting').value?`🔍 תצפיות: ${document.getElementById('notes_meeting').value}\n`:''}${document.getElementById('notes_proposal').value?`💡 הצעת ערך: ${document.getElementById('notes_proposal').value}\n`:''}
+💼 סיכויי סגירה: ${document.getElementById('close_chance').value||'—'}
+📅 פולו-אפ: ${document.getElementById('followup_date').value||'—'}
+💰 מחיר מוצע: ${fmt(v('proposed_price'))} / חודש`;
+
+  document.getElementById('aiSummaryText').textContent = summary;
+  document.getElementById('aiBox').style.display = 'block';
+  document.getElementById('aiBox').scrollIntoView({ behavior: 'smooth' });
+}
+
+function exportPDF() {
+  document.querySelector('.pdf-header').style.display = 'block';
+  const name = document.getElementById('rest_name').value || 'לקוח';
+  const date = document.getElementById('meeting_date').value || new Date().toISOString().split('T')[0];
+  const opt = {
+    margin: [8,8,8,8],
+    filename: `SmartPlate_${name}_${date}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak: { mode: ['avoid-all','css','legacy'] }
+  };
+  html2pdf().set(opt).from(document.getElementById('reportContent')).save().then(() => {
+    document.querySelector('.pdf-header').style.display = 'none';
+  });
+}
+
+async function saveToDrive() {
+  const btn = event.target;
+  btn.textContent = '⏳...';
+  btn.disabled = true;
+  
+  const ids = ['rest_name','contact_name','phone','biz_type','seats','meeting_date','address','years_active','challenges',
+    'c_sales_vat','c_open','c_purch','c_close','c_labor','c_labor2','c_delivery','c_marketing',
+    'c_rent','c_electric','c_account','c_taxes','c_insurance','c_other',
+    't_sales_vat','t_avg_deal','t_deals_day','t_work_days',
+    't_afc_pct_input','t_labor_pct_input','t_labor2_pct_input','t_delivery_pct_input','t_marketing_pct_input',
+    't_rent','t_electric','t_fixed_other','t_other',
+    'notes_meeting','notes_proposal','close_chance','followup_date','proposed_price'];
+  const data = {};
+  ids.forEach(id => { const el=document.getElementById(id); if(el) data[id]=el.value; });
+
+  // Use no-cors mode — can't read response but request goes through
+  // Instead, send via form POST to a new window
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardProxy';
+  form.target = '_blank';
+  form.style.display = 'none';
+  
+  // Send data as JSON in a hidden field won't work with form POST
+  // Use XMLHttpRequest with credentials
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://rosa-6d8ebb9e.base44.app/api/functions/clientDashboardProxy', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.withCredentials = false;
+  xhr.onload = function() {
+    try {
+      const result = JSON.parse(xhr.responseText);
+      if(result.fileUrl) {
+        document.getElementById('savingToast').style.display = 'block';
+        setTimeout(() => document.getElementById('savingToast').style.display='none', 3000);
+        btn.textContent = '✅ נשמר!';
+        setTimeout(() => { btn.textContent='☁️ Drive'; btn.disabled=false; }, 3000);
+        window.open(result.fileUrl, '_blank');
+      } else {
+        throw new Error(result.error||'שגיאה לא ידועה');
+      }
+    } catch(e) {
+      alert('שגיאה: ' + e.message);
+      btn.textContent = '☁️ Drive';
+      btn.disabled = false;
+    }
+  };
+  xhr.onerror = function() {
+    // CORS blocked from file:// — open the dashboard from web URL instead
+    alert('⚠️ כדי לשמור ל-Drive, פתח את הדשבורד מהלינק:\nhttps://base44.app/api/apps/69b697029d0cd0fecb49189b/files/mp/public/69b697029d0cd0fecb49189b/cd890bfac_client_dashboard.html');
+    btn.textContent = '☁️ Drive';
+    btn.disabled = false;
+  };
+  xhr.send(JSON.stringify(data));
+}
+
+calc();
+</script>
+</body>
+</html>
